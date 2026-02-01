@@ -24,6 +24,15 @@ class Config:
             config_path = 当前文件目录 / "config.toml"
         self.config_path = Path(config_path)
         self._config = self._load_config()
+        self._base_dir = self.config_path.parent.resolve()
+
+    def _解析路径(self, 路径: str) -> str:
+        if not 路径:
+            return 路径
+        p = Path(路径)
+        if p.is_absolute():
+            return str(p)
+        return str((self._base_dir / p).resolve())
     
     def _load_config(self) -> dict:
         """加载配置文件"""
@@ -42,17 +51,17 @@ class Config:
     @property
     def m3u8d_path(self) -> str:
         """N_m3u8DL-RE 可执行文件路径"""
-        return self._config["downloader"]["m3u8d_path"]
+        return self._解析路径(self._config["downloader"]["m3u8d_path"])
     
     @property
     def save_dir(self) -> str:
         """最终文件保存目录"""
-        return self._config["downloader"]["save_dir"]
+        return self._解析路径(self._config["downloader"]["save_dir"])
     
     @property
     def tmp_dir(self) -> str:
         """临时文件目录"""
-        return self._config["downloader"]["tmp_dir"]
+        return self._解析路径(self._config["downloader"]["tmp_dir"])
     
     @property
     def thread_count(self) -> int:
@@ -177,12 +186,12 @@ class Config:
     @property
     def ffmpeg_binary_path(self) -> str:
         """FFmpeg 路径"""
-        return self._config["downloader"]["ffmpeg_binary_path"]
+        return self._解析路径(self._config["downloader"]["ffmpeg_binary_path"])
     
     @property
     def decryption_binary_path(self) -> str:
         """解密工具路径"""
-        return self._config["downloader"]["decryption_binary_path"]
+        return self._解析路径(self._config["downloader"]["decryption_binary_path"])
 
 
 # 全局配置实例

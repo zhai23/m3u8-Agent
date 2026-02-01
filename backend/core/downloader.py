@@ -111,6 +111,11 @@ class M3U8下载器:
             if 日志回调:
                 日志回调(f"下载出错: {str(异常)}")
             return False
+        finally:
+            try:
+                最终临时目录.mkdir(parents=True, exist_ok=True)
+            except Exception:
+                pass
     
     def _构建下载命令(
         self,

@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from backend.core.config import get_config
 from backend.core.task_manager import 任务管理器
@@ -52,4 +52,3 @@ class TestTaskCleanupAndDedup(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

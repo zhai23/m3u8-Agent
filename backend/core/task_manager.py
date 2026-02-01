@@ -38,6 +38,16 @@ class 任务管理器:
 
     async def 初始化(self):
         await self._加载任务文件()
+        async with self._锁:
+            需要保存 = False
+            for 任务 in self._任务表.values():
+                if 任务.status == "running":
+                    任务.status = "paused"
+                    if not 任务.error:
+                        任务.error = "服务已重启，任务已暂停"
+                    需要保存 = True
+            if 需要保存:
+                await self._保存任务文件(需持锁=True)
 
     async def 列出任务(self) -> List[Task]:
         async with self._锁:
@@ -97,7 +107,7 @@ class 任务管理器:
             任务 = self._任务表.get(任务ID)
             if not 任务:
                 raise KeyError("任务不存在")
-            if 任务.status in ("running", "completed"):
+            if 任务.status == "completed":
                 return 任务
             任务.status = "running"
             任务.error = None
@@ -109,6 +119,8 @@ class 任务管理器:
                 self._停止原因.pop(任务ID, None)
                 协程任务 = asyncio.create_task(self._运行下载任务(任务ID), name=f"download:{任务ID}")
                 self._运行中任务[任务ID] = 协程任务
+            else:
+                return 任务
 
         return await self.获取任务(任务ID)
 
@@ -137,7 +149,19 @@ class 任务管理器:
 
     async def _运行下载任务(self, 任务ID: str):
         async with self._并发信号量:
-            下载器 = M3U8下载器()
+            下载器 = None
+            try:
+                下载器 = M3U8下载器()
+            except Exception as 异常:
+                async with self._锁:
+                    任务 = self._任务表.get(任务ID)
+                    if 任务 and 任务.status == "running":
+                        任务.status = "failed"
+                        任务.error = str(异常)
+                        await self._保存任务文件(需持锁=True)
+                        await self._事件总线.发布("task.failed", {"task": 任务.model_dump(mode="json")})
+                return
+
             async with self._锁:
                 self._运行中下载器[任务ID] = 下载器
 

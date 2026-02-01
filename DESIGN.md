@@ -52,13 +52,13 @@ m3u8-agent/
 ├── backend/                    # 后端代码
 │   ├── main.py                 # 应用入口（FastAPI app）
 │   ├── config.toml             # 配置文件
-│   ├── tasks.json              # 任务数据（自动生成）
+│   ├── data/                   # 数据目录
+│   │   └── tasks.json          # 任务数据（自动生成）
 │   │
 │   ├── core/                   # 核心逻辑
 │   │   ├── config.py           # 配置管理
 │   │   ├── downloader.py       # 下载器封装
 │   │   ├── task_manager.py     # 任务管理
-│   │   └── progress_parser.py  # 进度解析
 │   │
 │   ├── api/                    # API 路由
 │   │   ├── tasks.py            # 任务接口
@@ -69,17 +69,17 @@ m3u8-agent/
 │       ├── task.py             # 任务模型
 │       └── config.py           # 配置模型
 │
+│   ├── m3u8d/                  # N_m3u8DL-RE/ffmpeg 等后端依赖
+│   │   └── N_m3u8DL-RE.exe
+│   ├── downloads/              # 下载完成文件（后端生成）
+│   ├── downloads_tmp/          # 临时下载文件（后端生成）
+│   └── test/                   # 后端测试脚本
+│
 ├── frontend/                   # 前端代码（纯静态）
 │   ├── index.html              # 主页面
 │   ├── config.js               # 前端配置（后端地址等）
 │   ├── style.css               # 样式
 │   └── app.js                  # 应用逻辑
-│
-├── m3u8d/                      # N_m3u8DL-RE 存放目录
-│   └── N_m3u8DL-RE.exe
-│
-├── downloads/                  # 下载完成文件
-├── downloads_tmp/              # 临时下载文件
 │
 ├── requirements.txt            # Python 依赖
 ├── README.md                   # 使用说明
@@ -110,8 +110,8 @@ m3u8-agent/
 - **`frontend/app.js`**: 所有逻辑（API 调用、UI 更新、SSE 监听）
 
 #### 数据目录
-- **`downloads/`**: 下载完成的视频文件
-- **`downloads_tmp/`**: 下载过程中的临时文件
+- **`backend/downloads/`**: 下载完成的视频文件
+- **`backend/downloads_tmp/`**: 下载过程中的临时文件
 
 ---
 
@@ -138,16 +138,12 @@ class Task:
 
 ```toml
 [downloader]
-m3u8d_path = "m3u8d/N_m3u8DL-RE.exe"
-save_dir = "downloads"
-tmp_dir = "downloads_tmp"
+m3u8d_path = "./m3u8d/N_m3u8DL-RE.exe"   # 相对路径以 backend/ 为基准
+save_dir = "./downloads"                # 相对路径以 backend/ 为基准
+tmp_dir = "./downloads_tmp"             # 相对路径以 backend/ 为基准
 thread_count = 16
-retry_count = 3
-max_concurrent_tasks = 3
-
-[server]
-host = "0.0.0.0"
-port = 8000
+download_retry_count = 3
+http_request_timeout = 100
 ```
 
 ---
@@ -212,17 +208,19 @@ pending → running → completed
 3. 任务管理器检查并发数，启动下载（状态: `running`）
 4. 调用 N_m3u8DL-RE 子进程
 5. 解析输出，通过 SSE 推送进度
-6. 下载完成，移动文件到 `downloads/`（状态: `completed`）
+6. 下载完成，输出到 `backend/downloads/`（状态: `completed`）
 7. 失败则记录错误（状态: `failed`）
 
 ### N_m3u8DL-RE 调用
 
 ```bash
 N_m3u8DL-RE.exe "https://example.com/video.m3u8" \
-  --save-dir "./downloads_tmp" \
+  --tmp-dir "./downloads_tmp" \
+  --save-dir "./downloads" \
   --save-name "video_title" \
   --thread-count 16 \
-  --retry-count 3 \
+  --download-retry-count 3 \
+  --http-request-timeout 100 \
   --del-after-done
 ```
 
@@ -230,8 +228,8 @@ N_m3u8DL-RE.exe "https://example.com/video.m3u8" \
 
 通过正则表达式解析标准输出：
 - 进度百分比: `(\d+\.\d+)%`
-- 下载速度: `(\d+\.\d+\s*[KMG]B/s)`
-- 预计时间: `ETA:\s*(\d{2}:\d{2}:\d{2})`
+- 下载速度: `(\d+(?:\.\d+)?)\s*([KMG]?B)\s*(?:/s|ps)`
+- 预计时间: `ETA:\s*(\d{2}:\d{2}:\d{2})` 或行尾 `(\d{2}:\d{2}:\d{2})`
 
 ---
 
@@ -509,33 +507,19 @@ function 更新进度条(任务ID, 百分比) {
 ### 本地开发
 
 ```bash
-# 1. 启动后端
+# 1) 启动后端（固定 8000 端口）
 python backend/main.py
 
-# 2. 前端配置（可选，如果后端不在 localhost:8000）
-# 编辑 frontend/config.js，修改 baseURL
+# 2) 启动前端（固定 8100 端口）
+python frontend/run_frontend.py
 
-# 3. 访问前端
-# 方式一：直接打开 frontend/index.html
-# 方式二：启动本地服务器
-cd frontend
-python -m http.server 3000
-# 访问 http://localhost:3000
+# 3) 访问前端
+# http://127.0.0.1:8100
 ```
 
 ### 生产部署
 
-#### 方案 1: 前后端同服务器
-
-```bash
-# 后端提供静态文件服务
-uvicorn backend.main:app --host 0.0.0.0 --port 8000
-
-# frontend/config.js 配置
-baseURL: ''  # 空字符串表示同源
-```
-
-#### 方案 2: 前后端分离部署
+#### 前后端分离部署（强制）
 
 ```bash
 # 后端
@@ -547,6 +531,7 @@ baseURL: 'http://192.168.1.100:8000'  # 后端实际地址
 ```
 
 **注意事项**：
+- 本项目强制前后端分离：后端只提供 API + SSE，不提供静态文件服务
 - 前后端分离部署时，需要配置后端 CORS（已在设计中允许）
 - 修改 `frontend/config.js` 后无需重新构建，直接生效
 

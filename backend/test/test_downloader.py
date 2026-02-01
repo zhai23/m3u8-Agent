@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 # 添加项目根目录到 Python 路径
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from backend.core.downloader import 简单下载器
 from backend.core.config import get_config
@@ -22,7 +22,7 @@ def main():
     任务名称 = "测试视频"
     
     # M3U8 链接
-    m3u8链接 = "https://v8.zuidazym3u8.com/yyv8/202410/04/iZiAdYX28014/video/index.m3u8"
+    m3u8链接 = "https://v4.zuidazym3u8.com/yyv4/202411/01/CBT6uA2wNr23/video/index.m3u8"
     
     # 以下参数可选，留空则使用 config.toml 中的配置
     保存目录 = None  # 留空使用配置文件中的 save_dir

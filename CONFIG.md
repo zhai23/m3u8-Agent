@@ -4,7 +4,7 @@
 
 ## 配置文件位置
 
-- 默认位置：项目根目录下的 `config.toml`
+- 默认位置：`backend/config.toml`
 - 可以通过代码指定其他位置
 
 ## 配置项说明
@@ -15,9 +15,9 @@
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `m3u8d_path` | string | `"./m3u8d/N_m3u8DL-RE.exe"` | N_m3u8DL-RE 可执行文件路径 |
-| `save_dir` | string | `"./downloads"` | 最终文件保存目录 |
-| `tmp_dir` | string | `"./downloads_tmp"` | 临时文件目录（下载过程中的分片等） |
+| `m3u8d_path` | string | `"./m3u8d/N_m3u8DL-RE.exe"` | N_m3u8DL-RE 可执行文件路径（相对路径以 `backend/` 为基准） |
+| `save_dir` | string | `"./downloads"` | 最终文件保存目录（相对路径以 `backend/` 为基准） |
+| `tmp_dir` | string | `"./downloads_tmp"` | 临时文件目录（相对路径以 `backend/` 为基准） |
 
 #### 下载参数
 

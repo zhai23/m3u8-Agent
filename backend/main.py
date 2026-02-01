@@ -10,7 +10,6 @@ if str(项目根目录) not in sys.path:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from backend.api import tasks_router, config_router, stream_router, status_router
 from backend.core.task_manager import 任务管理器
@@ -38,10 +37,6 @@ app.include_router(status_router)
 app.include_router(config_router)
 app.include_router(tasks_router)
 app.include_router(stream_router)
-
-前端目录 = Path(__file__).parent.parent / "frontend"
-if 前端目录.exists():
-    app.mount("/", StaticFiles(directory=str(前端目录), html=True), name="frontend")
 
 
 if __name__ == "__main__":

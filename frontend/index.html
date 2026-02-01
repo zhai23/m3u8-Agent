@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>M3U8 下载器</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app-header">
+        <h1 class="app-title">M3U8 下载器</h1>
+        <div class="app-status" id="app-status">连接中…</div>
+      </header>
+
+      <section class="panel">
+        <h2 class="panel-title">创建任务</h2>
+        <form class="task-form" id="task-form">
+          <label class="field">
+            <span class="field-label">M3U8 链接</span>
+            <input class="field-input" type="text" id="task-url" placeholder="请输入 M3U8 链接" required />
+          </label>
+          <label class="field">
+            <span class="field-label">保存名称</span>
+            <input class="field-input" type="text" id="task-name" placeholder="请输入保存名称" required />
+          </label>
+          <button class="btn btn-primary" type="submit">创建</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">下载任务</h2>
+          <button class="btn" id="refresh-btn" type="button">刷新</button>
+        </div>
+        <div class="task-list" id="task-list"></div>
+      </section>
+    </main>
+
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -4,3 +4,4 @@ pydantic
 pydantic-settings
 aiofiles
 httpx
+toml

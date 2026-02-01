@@ -6,8 +6,8 @@ M3U8 下载器测试脚本
 import sys
 from pathlib import Path
 
-# 添加 backend 目录到 Python 路径
-sys.path.insert(0, str(Path(__file__).parent))
+# 添加项目根目录到 Python 路径
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from backend.core.downloader import 简单下载器
 from backend.core.config import get_config

@@ -357,20 +357,28 @@ class M3U8下载器:
         
         示例输出格式:
         [12:34:56] 45.5% | 2.5 MB/s | ETA: 00:02:30
+        Vid 1280x720 | 0 Kbps ------------------------------ 523/739 70.77% 153.99MB/228.51MB 15.76MBps 00:00:03
         """
         # 匹配百分比
         百分比匹配 = re.search(r'(\d+\.?\d*)%', 输出行)
         
-        # 匹配速度
-        速度匹配 = re.search(r'([\d.]+\s*[KMG]?B/s)', 输出行, re.IGNORECASE)
+        # 匹配速度（注意：日志里还有 0 Kbps 这种码率信息，这里只识别大写 B 的下载速度）
+        # 兼容：15.76MBps / 2.5 MB/s / 1.70MBps
+        速度列表 = re.findall(r'(\d+(?:\.\d+)?)\s*([KMG]?B)\s*(?:/s|ps)\b', 输出行)
+        速度 = None
+        if 速度列表:
+            数值, 单位 = 速度列表[-1]
+            速度 = f"{数值} {单位}/s"
         
-        # 匹配 ETA
+        # 匹配 ETA（兼容：ETA: 00:02:30 / 行尾 00:00:03 或 00:01:49 /）
         eta匹配 = re.search(r'ETA[:\s]+(\d{2}:\d{2}:\d{2})', 输出行)
+        if not eta匹配:
+            eta匹配 = re.search(r'(\d{2}:\d{2}:\d{2})(?=\s*(?:/|$))', 输出行)
         
         if 百分比匹配:
             进度信息 = {
                 "percent": float(百分比匹配.group(1)),
-                "speed": 速度匹配.group(1) if 速度匹配 else None,
+                "speed": 速度,
                 "eta": eta匹配.group(1) if eta匹配 else None,
                 "timestamp": datetime.now().isoformat()
             }

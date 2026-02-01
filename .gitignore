@@ -2,3 +2,5 @@
 /m3u8d/Logs
 /backend/__pycache__
 /backend/core/__pycache__
+/backend/api/__pycache__
+/backend/models/__pycache__

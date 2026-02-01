@@ -71,6 +71,7 @@ m3u8-agent/
 │
 ├── frontend/                   # 前端代码（纯静态）
 │   ├── index.html              # 主页面
+│   ├── config.js               # 前端配置（后端地址等）
 │   ├── style.css               # 样式
 │   └── app.js                  # 应用逻辑
 │
@@ -104,6 +105,7 @@ m3u8-agent/
 
 #### 前端目录
 - **`frontend/index.html`**: 单页面应用
+- **`frontend/config.js`**: 前端配置文件（后端地址、超时设置等）
 - **`frontend/style.css`**: 所有样式
 - **`frontend/app.js`**: 所有逻辑（API 调用、UI 更新、SSE 监听）
 
@@ -163,7 +165,6 @@ port = 8000
 | DELETE | `/api/tasks/{id}` | 删除任务 |
 | POST | `/api/tasks/{id}/start` | 开始任务 |
 | POST | `/api/tasks/{id}/pause` | 暂停任务 |
-| POST | `/api/tasks/{id}/cancel` | 取消任务 |
 | **配置管理** |
 | GET | `/api/config` | 获取配置 |
 | PUT | `/api/config` | 更新配置 |
@@ -236,41 +237,189 @@ N_m3u8DL-RE.exe "https://example.com/video.m3u8" \
 
 ## 7. 前端设计
 
-### 页面布局
+### 设计原则
 
+**极简优先** - 功能实现为主，界面后期美化
+
+- 使用原生 HTML 表单和按钮
+- 最小化 CSS，只保证基本可用性
+- 无需复杂组件，直接 DOM 操作
+- 先实现功能，后续专门美化
+
+### 页面布局（极简版）
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>M3U8 下载器</title>
+    <script src="config.js"></script>
+</head>
+<body>
+    <h1>M3U8 下载器</h1>
+    
+    <!-- 创建任务 -->
+    <form id="task-form">
+        <input type="text" id="url" placeholder="M3U8 链接" required>
+        <input type="text" id="name" placeholder="保存名称" required>
+        <button type="submit">开始下载</button>
+    </form>
+    
+    <!-- 任务列表 -->
+    <h2>下载任务</h2>
+    <div id="task-list"></div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
 ```
-┌────────────────────────────────────────┐
-│  M3U8 下载器                    [设置] │
-├────────────────────────────────────────┤
-│  M3U8 链接: [________________]         │
-│  保存名称:   [________________]         │
-│             [开始下载]                  │
-├────────────────────────────────────────┤
-│  下载任务                               │
-│  [全部] [进行中] [已完成] [失败]       │
-│  ┌──────────────────────────────────┐  │
-│  │ 视频标题          [暂停] [删除]  │  │
-│  │ ████████░░░░ 45%  2.5 MB/s       │  │
-│  └──────────────────────────────────┘  │
-│  ...                                   │
-└────────────────────────────────────────┘
+
+### 任务卡片（极简版）
+
+```html
+<!-- 单个任务 -->
+<div data-task-id="xxx">
+    <p>视频标题</p>
+    <p>进度: 45% | 速度: 2.5 MB/s</p>
+    <button onclick="暂停任务('xxx')">暂停</button>
+    <button onclick="删除任务('xxx')">删除</button>
+</div>
 ```
 
 ### 技术栈
 
-- **HTML5**: 语义化标签
-- **CSS3**: 原生 CSS + CSS Variables
+- **HTML5**: 原生表单和按钮
+- **CSS3**: 最小化样式（可选）
 - **JavaScript**: ES6+ 原生 JS
 - **HTTP**: Fetch API
 - **实时通信**: EventSource (SSE)
 
-### 核心功能
+### 前端配置
 
-1. **任务创建**: 表单提交 → POST `/api/tasks`
-2. **任务列表**: 页面加载 → GET `/api/tasks`
-3. **实时进度**: EventSource 监听 `/api/stream/tasks`
-4. **任务控制**: 按钮点击 → POST `/api/tasks/{id}/start|pause|cancel`
-5. **任务筛选**: 前端过滤显示
+**`frontend/config.js`** - 配置后端地址：
+
+```javascript
+// 前端配置文件
+const API_CONFIG = {
+    // 后端地址（根据部署环境修改）
+    baseURL: 'http://localhost:8000',
+    
+    // 超时设置（毫秒）
+    timeout: 30000,
+    
+    // SSE 重连间隔（毫秒）
+    reconnectInterval: 3000
+};
+```
+
+**使用方式**：
+
+在 [`index.html`](frontend/index.html:1) 中先引入配置文件：
+```html
+<script src="config.js"></script>
+<script src="app.js"></script>
+```
+
+在 [`app.js`](frontend/app.js:1) 中使用：
+```javascript
+// 使用配置的后端地址
+const API_BASE_URL = API_CONFIG.baseURL;
+
+async function fetchTasks() {
+    const 响应 = await fetch(`${API_BASE_URL}/api/tasks`);
+    return await 响应.json();
+}
+```
+
+**部署说明**：
+- 本地开发：使用默认配置 `http://localhost:8000`
+- 生产部署：修改 `config.js` 中的 `baseURL` 为实际后端地址
+- 跨域部署：前端和后端分离部署时，修改为后端完整 URL（如 `http://192.168.1.100:8000`）
+
+### 核心功能（极简实现）
+
+#### 1. 任务创建
+
+```javascript
+document.getElementById('task-form').addEventListener('submit', async (事件) => {
+    事件.preventDefault();
+    const 链接 = document.getElementById('url').value;
+    const 名称 = document.getElementById('name').value;
+    
+    await fetch(`${API_BASE_URL}/api/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: 链接, name: 名称 })
+    });
+    
+    加载任务列表();
+});
+```
+
+#### 2. 任务列表
+
+```javascript
+async function 加载任务列表() {
+    const 响应 = await fetch(`${API_BASE_URL}/api/tasks`);
+    const 任务列表 = await 响应.json();
+    
+    const 容器 = document.getElementById('task-list');
+    容器.innerHTML = 任务列表.map(任务 => `
+        <div data-task-id="${任务.id}">
+            <p>${任务.name}</p>
+            <p>进度: ${任务.progress}% | 速度: ${任务.speed}</p>
+            <button onclick="暂停任务('${任务.id}')">暂停</button>
+            <button onclick="删除任务('${任务.id}')">删除</button>
+        </div>
+    `).join('');
+}
+```
+
+#### 3. 实时进度
+
+```javascript
+const 事件源 = new EventSource(`${API_BASE_URL}/api/stream/tasks`);
+
+事件源.addEventListener('task.progress', (事件) => {
+    const 数据 = JSON.parse(事件.data);
+    const 任务元素 = document.querySelector(`[data-task-id="${数据.task_id}"]`);
+    if (任务元素) {
+        任务元素.querySelector('p:nth-child(2)').textContent =
+            `进度: ${数据.percent}% | 速度: ${数据.speed}`;
+    }
+});
+```
+
+#### 4. 任务控制
+
+```javascript
+async function 暂停任务(任务ID) {
+    await fetch(`${API_BASE_URL}/api/tasks/${任务ID}/pause`, { method: 'POST' });
+}
+
+async function 删除任务(任务ID) {
+    await fetch(`${API_BASE_URL}/api/tasks/${任务ID}`, { method: 'DELETE' });
+    加载任务列表();
+}
+```
+
+### 文件结构（极简版）
+
+```
+frontend/
+├── index.html          # 50 行以内，纯 HTML 结构
+├── config.js           # 5 行，配置后端地址
+├── style.css           # 可选，基础样式（后期美化）
+└── app.js              # 100 行以内，所有逻辑
+```
+
+### 开发建议
+
+1. **先不写 CSS**：使用浏览器默认样式即可
+2. **直接 DOM 操作**：不需要虚拟 DOM 或组件化
+3. **全局函数**：按钮直接 `onclick="函数名()"`
+4. **最小化代码**：能用一行就不用两行
+5. **后期美化**：功能完成后再统一美化界面
 
 ---
 
@@ -360,24 +509,46 @@ function 更新进度条(任务ID, 百分比) {
 ### 本地开发
 
 ```bash
-# 后端
+# 1. 启动后端
 python backend/main.py
 
-# 前端（可选）
+# 2. 前端配置（可选，如果后端不在 localhost:8000）
+# 编辑 frontend/config.js，修改 baseURL
+
+# 3. 访问前端
+# 方式一：直接打开 frontend/index.html
+# 方式二：启动本地服务器
 cd frontend
 python -m http.server 3000
+# 访问 http://localhost:3000
 ```
 
 ### 生产部署
 
-**后端**: 
+#### 方案 1: 前后端同服务器
+
 ```bash
+# 后端提供静态文件服务
 uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+# frontend/config.js 配置
+baseURL: ''  # 空字符串表示同源
 ```
 
-**前端**: 
-- 直接部署 `frontend/` 目录到任意静态服务器
-- 或由 FastAPI 直接提供静态文件服务
+#### 方案 2: 前后端分离部署
+
+```bash
+# 后端
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+# 前端部署到静态服务器（如 Nginx、1Panel）
+# 修改 frontend/config.js
+baseURL: 'http://192.168.1.100:8000'  # 后端实际地址
+```
+
+**注意事项**：
+- 前后端分离部署时，需要配置后端 CORS（已在设计中允许）
+- 修改 `frontend/config.js` 后无需重新构建，直接生效
 
 ---
 

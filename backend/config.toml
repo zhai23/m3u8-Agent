@@ -1,0 +1,58 @@
+# M3U8 下载器配置文件
+
+[downloader]
+# N_m3u8DL-RE 可执行文件路径
+m3u8d_path = "./m3u8d/N_m3u8DL-RE.exe"
+
+# 目录配置
+save_dir = "./downloads"          # 最终文件保存目录
+tmp_dir = "./downloads_tmp"       # 临时文件目录
+
+# 下载参数
+thread_count = 16                 # 下载线程数
+download_retry_count = 3          # 每个分片异常时的重试次数
+http_request_timeout = 100        # HTTP 请求超时时间（秒）
+
+# 下载行为
+check_segments_count = true       # 检查实际下载的分片数量是否与预期匹配
+del_after_done = true             # 完成后删除临时文件
+binary_merge = false              # 使用二进制合并（更快但可能不精确）
+skip_merge = false                # 跳过合并分片
+skip_download = false             # 跳过下载（仅解析）
+
+# 日志配置
+no_log = false                    # 关闭日志文件写入
+log_level = "INFO"                # 日志级别: DEBUG, INFO, WARN, ERROR, OFF
+write_meta_json = true            # 是否将信息写入 json 文件
+
+# 速度限制
+max_speed = ""                    # 限速（如 "15M" 或 "100K"，留空表示不限速）
+
+# 代理配置
+use_system_proxy = true           # 使用系统默认代理
+custom_proxy = ""                 # 自定义代理（如 "http://127.0.0.1:8888"）
+
+# 高级选项
+auto_select = false               # 自动选择所有类型的轨道并下载
+append_url_params = false         # 将 Url Params 添加至分片（某些网站需要）
+no_date_info = false              # 写入时不写入日期信息
+force_ansi_console = false        # 强制认定终端为支持 ANSI 的终端
+
+# 字幕相关
+sub_only = false                  # 只选取字幕轨道
+sub_format = "SRT"                # 字幕格式: SRT 或 VTT
+auto_subtitle_fix = true          # 自动修正字幕
+
+# 解密相关（如果需要）
+decryption_engine = "MP4DECRYPT"  # 解密引擎: MP4DECRYPT, SHAKA_PACKAGER, FFMPEG
+mp4_real_time_decryption = false  # 实时解密 MP4 分片
+
+# 自定义 HTTP 请求头（可选）
+# 格式: ["Cookie: mycookie", "User-Agent: iOS"]
+custom_headers = []
+
+# FFmpeg 路径（可选，留空则使用系统 PATH）
+ffmpeg_binary_path = ""
+
+# 解密工具路径（可选，留空则使用默认）
+decryption_binary_path = ""

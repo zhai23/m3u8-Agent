@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import PlainTextResponse
 
 from backend.core.task_manager import 任务管理器
 from backend.models.task import Task, TaskCreateRequest
@@ -57,3 +58,29 @@ async def 暂停任务(task_id: str, 任务管理: 任务管理器 = Depends(获
         return await 任务管理.暂停任务(task_id)
     except KeyError:
         raise HTTPException(status_code=404, detail="任务不存在")
+
+
+@router.get("/{task_id}/logs")
+async def 获取任务日志(
+    task_id: str,
+    tail: int = Query(400, ge=0, le=2000),
+    任务管理: 任务管理器 = Depends(获取任务管理器),
+):
+    try:
+        await 任务管理.获取任务(task_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    return await 任务管理.获取任务日志(task_id, tail=tail)
+
+
+@router.get("/{task_id}/logs/raw", response_class=PlainTextResponse)
+async def 获取任务日志原文(
+    task_id: str,
+    任务管理: 任务管理器 = Depends(获取任务管理器),
+):
+    try:
+        await 任务管理.获取任务(task_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    文本, 需截断 = await 任务管理.获取任务日志原文(task_id)
+    return PlainTextResponse(文本, headers={"X-Log-Truncated": "1" if 需截断 else "0"})

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -97,6 +98,7 @@ class 任务管理器:
         await self._停止任务用于删除(任务ID)
         if 需要清理临时文件:
             await self._清理临时目录(保存名称)
+        await self._删除任务日志(任务ID)
         async with self._锁:
             if 任务ID in self._任务表:
                 del self._任务表[任务ID]
@@ -170,6 +172,22 @@ class 任务管理器:
             def 进度回调(进度: Dict[str, Any]):
                 loop.create_task(self._更新任务进度(任务ID, 进度))
 
+            ansi样式 = re.compile(r"\x1b\[[0-9;]*m")
+
+            def 日志回调(消息: str):
+                清理后 = ansi样式.sub("", str(消息 or "")).strip()
+                if not 清理后:
+                    return
+                if 清理后.startswith("命令:"):
+                    return
+                loop.create_task(self._追加任务日志(任务ID, 清理后))
+                loop.create_task(
+                    self._事件总线.发布(
+                        "task.log",
+                        {"task_id": 任务ID, "line": 清理后, "ts": datetime.now(timezone.utc).isoformat()},
+                    )
+                )
+
             try:
                 async with self._锁:
                     任务 = self._任务表.get(任务ID)
@@ -178,11 +196,14 @@ class 任务管理器:
                     链接 = 任务.url
                     保存名称 = 任务.name
 
+                await self._追加任务日志(任务ID, f"=== 开始下载 {保存名称} ===")
                 成功 = await 下载器.下载(
                     链接=链接,
                     保存名称=保存名称,
                     进度回调=进度回调,
+                    日志回调=日志回调,
                 )
+                await self._追加任务日志(任务ID, f"=== 结束下载 {保存名称}（{'成功' if 成功 else '失败'}） ===")
 
                 async with self._锁:
                     任务 = self._任务表.get(任务ID)
@@ -206,8 +227,7 @@ class 任务管理器:
                         await self._事件总线.发布("task.completed", {"task": 任务.model_dump(mode="json")})
                     else:
                         任务.status = "failed"
-                        if not 任务.error:
-                            任务.error = "下载失败"
+                        任务.error = "下载失败"
                         await self._保存任务文件(需持锁=True)
                         await self._事件总线.发布("task.failed", {"task": 任务.model_dump(mode="json")})
 
@@ -224,7 +244,7 @@ class 任务管理器:
                             return
                         else:
                             任务.status = "failed"
-                            任务.error = "任务被中断"
+                            任务.error = "下载失败"
                         await self._保存任务文件(需持锁=True)
                 return
             finally:
@@ -348,3 +368,64 @@ class 任务管理器:
                 await asyncio.sleep(0.2)
             except OSError:
                 await asyncio.sleep(0.2)
+
+    def _获取任务日志路径(self, 任务ID: str) -> Path:
+        return Path(__file__).parent.parent / "data" / "logs" / f"{任务ID}.log"
+
+    async def _追加任务日志(self, 任务ID: str, 行文本: str):
+        日志路径 = self._获取任务日志路径(任务ID)
+        日志路径.parent.mkdir(parents=True, exist_ok=True)
+        内容 = (行文本 or "").rstrip("\r\n") + "\n"
+
+        def _写入():
+            with open(日志路径, "a", encoding="utf-8", errors="ignore") as f:
+                f.write(内容)
+
+        await asyncio.to_thread(_写入)
+
+    async def 获取任务日志(self, 任务ID: str, tail: int = 400, 最大字节数: int = 512_000) -> dict:
+        日志路径 = self._获取任务日志路径(任务ID)
+        if tail <= 0:
+            return {"task_id": 任务ID, "lines": [], "truncated": False}
+        tail = min(int(tail), 2000)
+
+        def _读取() -> tuple[list[str], bool]:
+            if not 日志路径.exists():
+                return ([], False)
+            大小 = 日志路径.stat().st_size
+            需截断 = 大小 > 最大字节数
+            with open(日志路径, "rb") as f:
+                if 需截断:
+                    f.seek(max(0, 大小 - 最大字节数))
+                数据 = f.read()
+            文本 = 数据.decode("utf-8", errors="ignore")
+            行列表 = [行 for 行 in 文本.splitlines() if 行.strip() != ""]
+            return (行列表[-tail:], 需截断)
+
+        行列表, 需截断 = await asyncio.to_thread(_读取)
+        return {"task_id": 任务ID, "lines": 行列表, "truncated": 需截断}
+
+    async def 获取任务日志原文(self, 任务ID: str, 最大字节数: int = 2_000_000) -> tuple[str, bool]:
+        日志路径 = self._获取任务日志路径(任务ID)
+
+        def _读取() -> tuple[str, bool]:
+            if not 日志路径.exists():
+                return ("", False)
+            大小 = 日志路径.stat().st_size
+            需截断 = 大小 > 最大字节数
+            with open(日志路径, "rb") as f:
+                if 需截断:
+                    f.seek(max(0, 大小 - 最大字节数))
+                数据 = f.read()
+            return (数据.decode("utf-8", errors="ignore"), 需截断)
+
+        return await asyncio.to_thread(_读取)
+
+    async def _删除任务日志(self, 任务ID: str):
+        日志路径 = self._获取任务日志路径(任务ID)
+        try:
+            await asyncio.to_thread(日志路径.unlink)
+        except FileNotFoundError:
+            return
+        except Exception:
+            return

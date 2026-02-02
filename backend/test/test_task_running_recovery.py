@@ -56,6 +56,7 @@ class TestTaskRunningRecovery(unittest.TestCase):
             async def 运行():
                 管理器 = 任务管理器()
                 管理器._任务文件路径 = tasks_path
+                管理器._获取任务日志路径 = lambda 任务ID: Path(临时目录) / "logs" / f"{任务ID}.log"
                 await 管理器.初始化()
                 任务 = await 管理器.获取任务("t1")
                 self.assertEqual(任务.status, "paused")
@@ -71,6 +72,7 @@ class TestTaskRunningRecovery(unittest.TestCase):
                     管理器 = 任务管理器()
                     管理器._任务文件路径 = Path(临时目录) / "tasks.json"
                     管理器._任务文件路径.parent.mkdir(parents=True, exist_ok=True)
+                    管理器._获取任务日志路径 = lambda 任务ID: Path(临时目录) / "logs" / f"{任务ID}.log"
                     await 管理器.初始化()
                     任务 = await 管理器.创建任务("https://example.com/a.m3u8", "a1")
                     await 管理器.开始任务(任务.id)

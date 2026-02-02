@@ -54,7 +54,7 @@ function 渲染任务(任务) {
   const percent = Math.max(0, Math.min(100, Number(任务.progress || 0)));
   const speed = 任务.speed || "—";
   const eta = 任务.eta || "—";
-  const error = 任务.error || "";
+  const error = 任务.status === "failed" ? "下载失败" : 任务.error || "";
   const item = document.createElement("div");
   item.className = "task-item";
   item.dataset.taskId = 任务.id;
@@ -71,6 +71,7 @@ function 渲染任务(任务) {
         </div>
       </div>
       <div class="task-actions">
+        <button class="btn" data-action="logs">日志</button>
         <button class="btn btn-success" data-action="start">开始</button>
         <button class="btn btn-warning" data-action="pause">暂停</button>
         <button class="btn" data-action="delete">删除</button>
@@ -85,6 +86,10 @@ function 渲染任务(任务) {
   item.querySelectorAll("button[data-action]").forEach((按钮) => {
     按钮.addEventListener("click", async () => {
       const 动作 = 按钮.dataset.action;
+      if (动作 === "logs") {
+        await 打开任务日志(任务);
+        return;
+      }
       await 执行动作(任务.id, 动作);
     });
   });
@@ -103,6 +108,102 @@ function escapeHtml(str) {
 
 let _加载任务列表序号 = 0;
 let _刷新定时器 = null;
+
+let _日志弹窗遮罩 = null;
+let _日志内容元素 = null;
+let _日志标题元素 = null;
+let _当前日志任务ID = null;
+let _当前日志任务名 = "";
+
+function 确保日志弹窗() {
+  if (_日志弹窗遮罩) return;
+  const 遮罩 = document.createElement("div");
+  遮罩.className = "log-modal-backdrop";
+  遮罩.innerHTML = `
+    <div class="log-modal" role="dialog" aria-label="任务日志">
+      <div class="log-modal-head">
+        <div class="log-modal-title"></div>
+        <div class="log-modal-actions">
+          <button class="btn" data-log-action="refresh">刷新</button>
+          <button class="btn" data-log-action="raw">原文</button>
+          <button class="btn btn-danger" data-log-action="close">关闭</button>
+        </div>
+      </div>
+      <div class="log-modal-body"><pre class="log-content"></pre></div>
+    </div>
+  `;
+  document.body.appendChild(遮罩);
+  _日志弹窗遮罩 = 遮罩;
+  _日志标题元素 = 遮罩.querySelector(".log-modal-title");
+  _日志内容元素 = 遮罩.querySelector(".log-content");
+
+  遮罩.addEventListener("click", (事件) => {
+    if (事件.target === 遮罩) 关闭任务日志();
+  });
+  遮罩.querySelectorAll("button[data-log-action]").forEach((按钮) => {
+    按钮.addEventListener("click", async () => {
+      const 动作 = 按钮.dataset.logAction;
+      if (动作 === "close") {
+        关闭任务日志();
+      } else if (动作 === "refresh") {
+        await 刷新任务日志();
+      } else if (动作 === "raw") {
+        if (_当前日志任务ID) {
+          window.open(apiUrl(`/api/tasks/${_当前日志任务ID}/logs/raw`), "_blank");
+        }
+      }
+    });
+  });
+  window.addEventListener("keydown", (事件) => {
+    if (事件.key === "Escape" && _日志弹窗遮罩.classList.contains("is-open")) {
+      关闭任务日志();
+    }
+  });
+}
+
+function 关闭任务日志() {
+  if (!_日志弹窗遮罩) return;
+  _日志弹窗遮罩.classList.remove("is-open");
+  _当前日志任务ID = null;
+  _当前日志任务名 = "";
+}
+
+async function 打开任务日志(任务) {
+  确保日志弹窗();
+  _当前日志任务ID = 任务.id;
+  _当前日志任务名 = 任务.name || "";
+  _日志标题元素.textContent = `日志：${_当前日志任务名}（${_当前日志任务ID}）`;
+  _日志内容元素.textContent = "加载中…\n";
+  _日志弹窗遮罩.classList.add("is-open");
+  await 刷新任务日志();
+}
+
+async function 刷新任务日志() {
+  if (!_当前日志任务ID || !_日志内容元素) return;
+  try {
+    const 数据 = await requestJson(`/api/tasks/${_当前日志任务ID}/logs?tail=600`);
+    const 行列表 = Array.isArray(数据?.lines) ? 数据.lines : [];
+    const 头 = 数据?.truncated ? "（仅显示日志末尾，已截断）" : "";
+    _日志标题元素.textContent = `日志：${_当前日志任务名}（${_当前日志任务ID}）${头}`;
+    _日志内容元素.textContent = 行列表.join("\n") + (行列表.length ? "\n" : "");
+    const 容器 = _日志内容元素.parentElement;
+    容器.scrollTop = 容器.scrollHeight;
+  } catch (异常) {
+    _日志内容元素.textContent = `加载日志失败：${异常.message || 异常}\n`;
+  }
+}
+
+function 追加任务日志行(行) {
+  if (!_日志弹窗遮罩 || !_日志弹窗遮罩.classList.contains("is-open")) return;
+  if (!_日志内容元素) return;
+  const 容器 = _日志内容元素.parentElement;
+  const 贴底 = 容器.scrollTop + 容器.clientHeight >= 容器.scrollHeight - 20;
+  _日志内容元素.textContent += `${行}\n`;
+  if (_日志内容元素.textContent.length > 300_000) {
+    _日志内容元素.textContent = _日志内容元素.textContent.slice(-250_000);
+  }
+  if (贴底) 容器.scrollTop = 容器.scrollHeight;
+}
 
 function 安排刷新() {
   if (_刷新定时器) return;
@@ -198,6 +299,17 @@ function 启动SSE() {
       } catch {}
     });
 
+    事件源.addEventListener("task.log", (事件) => {
+      try {
+        const 数据 = JSON.parse(事件.data);
+        if (数据 && dataHasTaskLog(数据)) {
+          if (数据.task_id === _当前日志任务ID) {
+            追加任务日志行(数据.line);
+          }
+        }
+      } catch {}
+    });
+
     事件源.addEventListener("ping", () => {});
 
     事件源.onerror = () => {
@@ -215,6 +327,10 @@ function 启动SSE() {
   }
 
   连接();
+}
+
+function dataHasTaskLog(数据) {
+  return typeof 数据.task_id === "string" && typeof 数据.line === "string";
 }
 
 document.getElementById("refresh-btn").addEventListener("click", async () => {

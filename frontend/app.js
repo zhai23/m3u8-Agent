@@ -71,10 +71,11 @@ function 渲染任务(任务) {
         </div>
       </div>
       <div class="task-actions">
-        <button class="btn" data-action="logs">日志</button>
         <button class="btn btn-success" data-action="start">开始</button>
         <button class="btn btn-warning" data-action="pause">暂停</button>
-        <button class="btn" data-action="delete">删除</button>
+        <button class="btn btn-danger" data-action="delete">删除</button>
+        <button class="btn btn-primary" data-action="url">链接</button>
+        <button class="btn btn-info" data-action="logs">日志</button>
       </div>
     </div>
     <div class="task-progress">
@@ -86,6 +87,10 @@ function 渲染任务(任务) {
   item.querySelectorAll("button[data-action]").forEach((按钮) => {
     按钮.addEventListener("click", async () => {
       const 动作 = 按钮.dataset.action;
+      if (动作 === "url") {
+        打开任务链接(任务);
+        return;
+      }
       if (动作 === "logs") {
         await 打开任务日志(任务);
         return;
@@ -114,6 +119,70 @@ let _日志内容元素 = null;
 let _日志标题元素 = null;
 let _当前日志任务ID = null;
 let _当前日志任务名 = "";
+
+let _链接弹窗遮罩 = null;
+let _链接内容元素 = null;
+let _链接标题元素 = null;
+let _当前链接任务ID = null;
+let _当前链接任务名 = "";
+let _当前链接 = "";
+
+function 确保链接弹窗() {
+  if (_链接弹窗遮罩) return;
+  const 遮罩 = document.createElement("div");
+  遮罩.className = "log-modal-backdrop";
+  遮罩.innerHTML = `
+    <div class="log-modal" role="dialog" aria-label="任务链接">
+      <div class="log-modal-head">
+        <div class="log-modal-title"></div>
+        <div class="log-modal-actions">
+          <button class="btn" data-url-action="copy">复制</button>
+          <button class="btn btn-danger" data-url-action="close">关闭</button>
+        </div>
+      </div>
+      <div class="log-modal-body"><pre class="log-content"></pre></div>
+    </div>
+  `;
+  document.body.appendChild(遮罩);
+  _链接弹窗遮罩 = 遮罩;
+  _链接标题元素 = 遮罩.querySelector(".log-modal-title");
+  _链接内容元素 = 遮罩.querySelector(".log-content");
+
+  遮罩.addEventListener("click", (事件) => {
+    if (事件.target === 遮罩) 关闭任务链接();
+  });
+  遮罩.querySelectorAll("button[data-url-action]").forEach((按钮) => {
+    按钮.addEventListener("click", async () => {
+      const 动作 = 按钮.dataset.urlAction;
+      if (动作 === "close") {
+        关闭任务链接();
+      } else if (动作 === "copy") {
+        await 复制文本(_当前链接);
+        设置状态文案("已复制链接");
+      }
+    });
+  });
+}
+
+function 关闭任务链接() {
+  if (!_链接弹窗遮罩) return;
+  _链接弹窗遮罩.classList.remove("is-open");
+  _当前链接任务ID = null;
+  _当前链接任务名 = "";
+  _当前链接 = "";
+}
+
+function 打开任务链接(任务) {
+  确保链接弹窗();
+  _当前链接任务ID = 任务.id;
+  _当前链接任务名 = 任务.name || "";
+  _当前链接 = String(任务.url || "");
+  _链接标题元素.textContent = `链接：${_当前链接任务名}（${_当前链接任务ID}）`;
+  _链接内容元素.textContent = _当前链接 ? `${_当前链接}\n` : "（无链接）\n";
+  _链接弹窗遮罩.classList.add("is-open");
+  const 容器 = _链接内容元素.parentElement;
+  容器.scrollTop = 0;
+}
 
 function 确保日志弹窗() {
   if (_日志弹窗遮罩) return;
@@ -155,9 +224,9 @@ function 确保日志弹窗() {
     });
   });
   window.addEventListener("keydown", (事件) => {
-    if (事件.key === "Escape" && _日志弹窗遮罩.classList.contains("is-open")) {
-      关闭任务日志();
-    }
+    if (事件.key !== "Escape") return;
+    if (_日志弹窗遮罩?.classList.contains("is-open")) 关闭任务日志();
+    if (_链接弹窗遮罩?.classList.contains("is-open")) 关闭任务链接();
   });
 }
 
@@ -331,6 +400,25 @@ function 启动SSE() {
 
 function dataHasTaskLog(数据) {
   return typeof 数据.task_id === "string" && typeof 数据.line === "string";
+}
+
+async function 复制文本(文本) {
+  const 最终文本 = String(文本 || "");
+  try {
+    await navigator.clipboard.writeText(最终文本);
+    return;
+  } catch {}
+  const 文本框 = document.createElement("textarea");
+  文本框.value = 最终文本;
+  文本框.setAttribute("readonly", "readonly");
+  文本框.style.position = "fixed";
+  文本框.style.left = "-9999px";
+  document.body.appendChild(文本框);
+  文本框.select();
+  try {
+    document.execCommand("copy");
+  } catch {}
+  document.body.removeChild(文本框);
 }
 
 document.getElementById("refresh-btn").addEventListener("click", async () => {

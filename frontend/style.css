@@ -8,6 +8,7 @@
   --danger: #ef4444;
   --success: #22c55e;
   --warning: #f59e0b;
+  --info: #8b5cf6;
 }
 
 * {
@@ -70,6 +71,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
   gap: 10px;
+  align-items: end;
 }
 
 .field {
@@ -127,6 +129,11 @@ body {
 .btn-warning {
   border-color: rgba(245, 158, 11, 0.6);
   background: rgba(245, 158, 11, 0.12);
+}
+
+.btn-info {
+  border-color: rgba(139, 92, 246, 0.6);
+  background: rgba(139, 92, 246, 0.12);
 }
 
 .task-list {

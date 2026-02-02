@@ -61,30 +61,34 @@ class 任务管理器:
         for 任务ID in 运行中任务ID列表:
             await self._追加任务日志(任务ID, "=== 服务关闭，任务被强制停止 ===")
 
-        for 任务ID, 下载器 in 下载器列表:
+        取消任务列表: List[asyncio.Task] = []
+        for _, 下载器 in 下载器列表:
             if not 下载器:
                 continue
-            try:
-                await asyncio.wait_for(下载器.取消(), timeout=3.0)
-            except Exception:
-                pass
+            取消任务列表.append(asyncio.create_task(asyncio.wait_for(下载器.取消(), timeout=3.0)))
+        if 取消任务列表:
+            _ = await asyncio.gather(*取消任务列表, return_exceptions=True)
 
+        被取消协程列表: List[asyncio.Task] = []
         for 任务ID, 协程任务 in 协程任务列表:
             if 协程任务 and not 协程任务.done():
                 协程任务.cancel()
+                被取消协程列表.append(协程任务)
 
-        await asyncio.sleep(0)
+        if 被取消协程列表:
+            try:
+                await asyncio.wait_for(asyncio.gather(*被取消协程列表, return_exceptions=True), timeout=1.0)
+            except Exception:
+                pass
 
         async with self._锁:
             需要保存 = False
-            现在 = datetime.now(timezone.utc)
             for 任务ID in 运行中任务ID列表:
                 任务 = self._任务表.get(任务ID)
                 if not 任务:
                     continue
                 if 任务.status == "running":
                     任务.status = "paused"
-                    任务.completed_at = 现在
                     任务.error = "服务关闭，任务已暂停"
                     需要保存 = True
             if 需要保存:

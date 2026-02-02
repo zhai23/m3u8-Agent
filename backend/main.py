@@ -21,8 +21,13 @@ async def 生命周期(app: FastAPI):
     任务管理 = 任务管理器()
     await 任务管理.初始化()
     app.state.task_manager = 任务管理
+    app.state.shutdown_event = asyncio.Event()
     yield
     try:
+        try:
+            app.state.shutdown_event.set()
+        except Exception:
+            pass
         await asyncio.shield(任务管理.关闭())
     except Exception:
         pass
@@ -55,5 +60,5 @@ if __name__ == "__main__":
         host=host,
         port=port,
         reload=False,
-        timeout_graceful_shutdown=0,
+        timeout_graceful_shutdown=5,
     )

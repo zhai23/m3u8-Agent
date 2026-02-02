@@ -50,6 +50,46 @@ class 任务管理器:
             if 需要保存:
                 await self._保存任务文件(需持锁=True)
 
+    async def 关闭(self):
+        async with self._锁:
+            运行中任务ID列表 = [任务ID for 任务ID, 任务 in self._任务表.items() if 任务.status == "running"]
+            for 任务ID in 运行中任务ID列表:
+                self._停止原因[任务ID] = "shutdown"
+            下载器列表 = [(任务ID, self._运行中下载器.get(任务ID)) for 任务ID in 运行中任务ID列表]
+            协程任务列表 = [(任务ID, self._运行中任务.get(任务ID)) for 任务ID in 运行中任务ID列表]
+
+        for 任务ID in 运行中任务ID列表:
+            await self._追加任务日志(任务ID, "=== 服务关闭，任务被强制停止 ===")
+
+        for 任务ID, 下载器 in 下载器列表:
+            if not 下载器:
+                continue
+            try:
+                await asyncio.wait_for(下载器.取消(), timeout=3.0)
+            except Exception:
+                pass
+
+        for 任务ID, 协程任务 in 协程任务列表:
+            if 协程任务 and not 协程任务.done():
+                协程任务.cancel()
+
+        await asyncio.sleep(0)
+
+        async with self._锁:
+            需要保存 = False
+            现在 = datetime.now(timezone.utc)
+            for 任务ID in 运行中任务ID列表:
+                任务 = self._任务表.get(任务ID)
+                if not 任务:
+                    continue
+                if 任务.status == "running":
+                    任务.status = "paused"
+                    任务.completed_at = 现在
+                    任务.error = "服务关闭，任务已暂停"
+                    需要保存 = True
+            if 需要保存:
+                await self._保存任务文件(需持锁=True)
+
     async def 列出任务(self) -> List[Task]:
         async with self._锁:
             return list(self._任务表.values())
@@ -236,8 +276,10 @@ class 任务管理器:
                     任务 = self._任务表.get(任务ID)
                     if 任务 and 任务.status == "running":
                         停止原因 = self._停止原因.get(任务ID)
-                        if 停止原因 == "paused":
+                        if 停止原因 in {"paused", "shutdown"}:
                             任务.status = "paused"
+                            if 停止原因 == "shutdown":
+                                任务.error = "服务关闭，任务已暂停"
                             await self._保存任务文件(需持锁=True)
                             return
                         if 停止原因 == "deleting":

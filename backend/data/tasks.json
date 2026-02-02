@@ -1,41 +1,15 @@
 [
   {
-    "id": "171490fe-5534-44c1-8463-c61a1f09b73d",
+    "id": "0a7f8040-9946-4b60-a1d4-11511db412f4",
     "url": "https://v4.zuidazym3u8.com/yyv4/202411/01/CBT6uA2wNr23/video/index.m3u8",
-    "name": "视频1",
+    "name": "视频21",
     "status": "paused",
-    "progress": 73.39,
-    "speed": "4.53 MB/s",
-    "eta": "00:00:10",
-    "created_at": "2026-02-02T15:53:09.871225Z",
-    "started_at": "2026-02-02T15:53:11.213513Z",
+    "progress": 21.91,
+    "speed": "4.98 MB/s",
+    "eta": "00:01:05",
+    "created_at": "2026-02-02T16:49:49.891265Z",
+    "started_at": "2026-02-02T16:49:52.001025Z",
     "completed_at": null,
-    "error": null
-  },
-  {
-    "id": "7361670d-0a3e-4cfb-acc6-630b44934c81",
-    "url": "https://v4.zuidazym3u8.com/yyv4/202411/01/CBT6uA2wNr23/video/index.m3u8",
-    "name": "视频2",
-    "status": "paused",
-    "progress": 1.48,
-    "speed": "323.51 KB/s",
-    "eta": "00:24:32",
-    "created_at": "2026-02-02T16:06:08.476074Z",
-    "started_at": "2026-02-02T16:06:16.639568Z",
-    "completed_at": null,
-    "error": null
-  },
-  {
-    "id": "39bab326-ecb1-4d36-b86e-47cbd489acef",
-    "url": "https://v4.zuidazymaa3u8.com/yyv4/202411/01/CBT6uA2wNr23/video/index.m3u8",
-    "name": "视频3",
-    "status": "failed",
-    "progress": 0.0,
-    "speed": null,
-    "eta": null,
-    "created_at": "2026-02-02T16:07:54.726718Z",
-    "started_at": "2026-02-02T16:07:56.304380Z",
-    "completed_at": null,
-    "error": "下载失败"
+    "error": "服务关闭，任务已暂停"
   }
 ]

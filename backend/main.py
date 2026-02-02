@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 import sys
@@ -21,6 +22,10 @@ async def 生命周期(app: FastAPI):
     await 任务管理.初始化()
     app.state.task_manager = 任务管理
     yield
+    try:
+        await asyncio.shield(任务管理.关闭())
+    except Exception:
+        pass
 
 
 app = FastAPI(title="M3U8 Agent", lifespan=生命周期)
@@ -45,4 +50,10 @@ if __name__ == "__main__":
 
     host = os.environ.get("M3U8_AGENT_HOST", "0.0.0.0")
     port = int(os.environ.get("M3U8_AGENT_PORT", "8000"))
-    uvicorn.run("backend.main:app", host=host, port=port, reload=False)
+    uvicorn.run(
+        "backend.main:app",
+        host=host,
+        port=port,
+        reload=False,
+        timeout_graceful_shutdown=0,
+    )

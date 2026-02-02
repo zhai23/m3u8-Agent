@@ -28,14 +28,17 @@ async def 任务事件流(
     async def 生成器() -> AsyncGenerator[str, None]:
         try:
             yield "retry: 3000\n\n"
-            while True:
-                if await request.is_disconnected():
-                    break
-                try:
-                    事件对象 = await asyncio.wait_for(订阅队列.get(), timeout=5.0)
-                    yield _格式化SSE(事件对象.event, 事件对象.data)
-                except asyncio.TimeoutError:
-                    yield "event: ping\ndata: {}\n\n"
+            try:
+                while True:
+                    if await request.is_disconnected():
+                        break
+                    try:
+                        事件对象 = await asyncio.wait_for(订阅队列.get(), timeout=5.0)
+                        yield _格式化SSE(事件对象.event, 事件对象.data)
+                    except asyncio.TimeoutError:
+                        yield "event: ping\ndata: {}\n\n"
+            except asyncio.CancelledError:
+                return
         finally:
             await 任务管理.事件总线.取消订阅(订阅队列)
 

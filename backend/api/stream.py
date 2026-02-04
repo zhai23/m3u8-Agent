@@ -11,6 +11,14 @@ from backend.core.task_manager import 任务管理器
 from .deps import 获取任务管理器
 
 
+class 静默StreamingResponse(StreamingResponse):
+    async def __call__(self, scope, receive, send):
+        try:
+            await super().__call__(scope, receive, send)
+        except asyncio.CancelledError:
+            return
+
+
 router = APIRouter(prefix="/api/stream", tags=["stream"])
 
 
@@ -67,4 +75,4 @@ async def 任务事件流(
         finally:
             await 任务管理.事件总线.取消订阅(订阅队列)
 
-    return StreamingResponse(生成器(), media_type="text/event-stream")
+    return 静默StreamingResponse(生成器(), media_type="text/event-stream")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import uuid
 from datetime import datetime, timezone
@@ -20,7 +21,12 @@ from .event_bus import 事件总线
 
 class 任务管理器:
     def __init__(self, 最大并发数: int = 3):
-        self._任务文件路径 = Path(__file__).parent.parent / "data" / "tasks.json"
+        后端目录 = Path(__file__).resolve().parent.parent
+
+        数据根目录 = 后端目录 / "var"
+
+        self._数据根目录 = 数据根目录
+        self._任务文件路径 = self._数据根目录 / "tasks.json"
         self._任务文件路径.parent.mkdir(parents=True, exist_ok=True)
 
         self._锁 = asyncio.Lock()
@@ -416,7 +422,7 @@ class 任务管理器:
                 await asyncio.sleep(0.2)
 
     def _获取任务日志路径(self, 任务ID: str) -> Path:
-        return Path(__file__).parent.parent / "data" / "logs" / f"{任务ID}.log"
+        return self._数据根目录 / "logs" / f"{任务ID}.log"
 
     async def _追加任务日志(self, 任务ID: str, 行文本: str):
         日志路径 = self._获取任务日志路径(任务ID)

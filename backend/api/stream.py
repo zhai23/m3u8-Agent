@@ -35,17 +35,18 @@ async def 任务事件流(
                         break
                     if await request.is_disconnected():
                         break
+                    取事件任务 = asyncio.create_task(订阅队列.get())
+                    关闭任务 = asyncio.create_task(关闭事件.wait()) if 关闭事件 else None
                     try:
-                        取事件任务 = asyncio.create_task(订阅队列.get())
                         等待任务 = {取事件任务}
-                        关闭任务 = None
-                        if 关闭事件:
-                            关闭任务 = asyncio.create_task(关闭事件.wait())
+                        if 关闭任务:
                             等待任务.add(关闭任务)
 
                         完成, 未完成 = await asyncio.wait(等待任务, timeout=5.0, return_when=asyncio.FIRST_COMPLETED)
-                        for t in 未完成:
-                            t.cancel()
+                        if 未完成:
+                            for t in 未完成:
+                                t.cancel()
+                            _ = await asyncio.gather(*未完成, return_exceptions=True)
 
                         if not 完成:
                             yield "event: ping\ndata: {}\n\n"
@@ -55,8 +56,12 @@ async def 任务事件流(
                         if 取事件任务 in 完成:
                             事件对象 = 取事件任务.result()
                             yield _格式化SSE(事件对象.event, 事件对象.data)
-                    except asyncio.TimeoutError:
-                        yield "event: ping\ndata: {}\n\n"
+                    finally:
+                        if 取事件任务 and not 取事件任务.done():
+                            取事件任务.cancel()
+                        if 关闭任务 and not 关闭任务.done():
+                            关闭任务.cancel()
+                        _ = await asyncio.gather(*[t for t in (取事件任务, 关闭任务) if t], return_exceptions=True)
             except asyncio.CancelledError:
                 return
         finally:

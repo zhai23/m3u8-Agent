@@ -208,12 +208,14 @@ m3u8-Agent/
 │   ├── models/                 # 数据模型
 │   │   ├── task.py             # 任务模型
 │   │   └── config.py           # 配置模型
-│   ├── data/                   # 数据目录
-│   │   └── tasks.json          # 任务数据
 │   ├── m3u8d/                  # 下载工具
 │   │   └── N_m3u8DL-RE.exe     # N_m3u8DL-RE
 │   ├── downloads/              # 下载文件
 │   └── downloads_tmp/          # 临时文件
+│
+│   ├── var/                    # 运行期数据目录（自动生成）
+│   │   ├── tasks.json          # 任务数据
+│   │   └── logs/               # 任务日志（每任务一个 .log）
 │
 ├── frontend/                   # 前端代码
 │   ├── index.html              # 主页面
@@ -231,6 +233,10 @@ m3u8-Agent/
 ```
 
 ---
+
+## 📦 运行期数据目录
+
+- 固定：`backend/var/` 用于保存任务数据与日志（自动生成）
 
 ## 🔌 API 文档
 

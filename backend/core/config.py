@@ -5,7 +5,9 @@
 
 import tomllib
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Any, Dict, Union
+
+import toml
 
 
 class Config:
@@ -192,6 +194,35 @@ class Config:
     def decryption_binary_path(self) -> str:
         """解密工具路径"""
         return self._解析路径(self._config["downloader"]["decryption_binary_path"])
+
+
+def _默认配置文件路径() -> Path:
+    return Path(__file__).resolve().parent.parent / "config.toml"
+
+
+def read_config_toml(config_path: Union[str, Path, None] = None) -> Dict[str, Any]:
+    路径 = Path(config_path) if config_path is not None else _默认配置文件路径()
+    if not 路径.exists():
+        return {}
+    with open(路径, "rb") as f:
+        return tomllib.load(f)
+
+
+def write_config_toml(config: Dict[str, Any], config_path: Union[str, Path, None] = None):
+    路径 = Path(config_path) if config_path is not None else _默认配置文件路径()
+    路径.parent.mkdir(parents=True, exist_ok=True)
+    文本 = toml.dumps(config or {})
+    路径.write_text(文本, encoding="utf-8")
+
+
+def deep_merge_dict(旧: Dict[str, Any], 新: Dict[str, Any]) -> Dict[str, Any]:
+    结果: Dict[str, Any] = dict(旧 or {})
+    for 键, 值 in (新 or {}).items():
+        if isinstance(值, dict) and isinstance(结果.get(键), dict):
+            结果[键] = deep_merge_dict(结果[键], 值)
+        else:
+            结果[键] = 值
+    return 结果
 
 
 # 全局配置实例

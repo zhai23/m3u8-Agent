@@ -52,9 +52,6 @@ m3u8-agent/
 ├── backend/                    # 后端代码
 │   ├── main.py                 # 应用入口（FastAPI app）
 │   ├── config.toml             # 配置文件
-│   ├── data/                   # 数据目录
-│   │   └── tasks.json          # 任务数据（自动生成）
-│   │
 │   ├── core/                   # 核心逻辑
 │   │   ├── config.py           # 配置管理
 │   │   ├── downloader.py       # 下载器封装
@@ -74,6 +71,10 @@ m3u8-agent/
 │   ├── downloads/              # 下载完成文件（后端生成）
 │   ├── downloads_tmp/          # 临时下载文件（后端生成）
 │   └── test/                   # 后端测试脚本
+│
+│   ├── var/                    # 运行期数据目录（自动生成，可配置）
+│   │   ├── tasks.json          # 任务数据
+│   │   └── logs/               # 任务日志（每任务一个 .log）
 │
 ├── frontend/                   # 前端代码（纯静态）
 │   ├── index.html              # 主页面

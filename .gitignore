@@ -1,6 +1,8 @@
 /backend/downloads
 /backend/downloads_tmp
 /backend/m3u8d/Logs
+/backend/data
+/backend/var
 /backend/__pycache__
 /backend/core/__pycache__
 /backend/api/__pycache__

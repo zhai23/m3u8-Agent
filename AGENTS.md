@@ -459,8 +459,8 @@ pytest tests/test_tasks.py::test_create_task -v
 - 后端：`backend/` 目录
 - 前端：`frontend/` 目录（纯静态）
 - 配置：`backend/config.toml`
-- 任务数据：`backend/data/tasks.json`
-- 日志：`backend/data/logs/*.jsonl`
+- 任务数据：默认 `backend/var/tasks.json`（可用环境变量 `M3U8_AGENT_DATA_DIR` 覆盖）
+- 日志：默认 `backend/var/logs/*.log`（可用环境变量 `M3U8_AGENT_DATA_DIR` 覆盖）
 
 ---
 

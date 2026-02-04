@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 TaskStatus = Literal["pending", "running", "paused", "completed", "failed"]
@@ -22,12 +22,6 @@ class Task(BaseModel):
     completed_at: Optional[datetime] = None
     error: Optional[str] = None
 
-    @field_validator("status", mode="before")
-    @classmethod
-    def _兼容旧状态(cls, 值):
-        if 值 not in {"pending", "running", "paused", "completed", "failed"}:
-            return "paused"
-        return 值
 
 
 class TaskCreateRequest(BaseModel):
